@@ -15,12 +15,13 @@ data = data.drop(data.columns[0], axis=1) # Remove the row index
 ###########################################
 
 summaryColumns = list(data.columns)
-summaryColumns.remove("Individual")
+toBeRemoved = ["Individual", "Phase", "Round", "Cohort"]
+summaryColumns = [col for col in summaryColumns if col not in toBeRemoved]
 
 print(data[summaryColumns].describe())
 
 # Calculate correlation matrix
-correlation_matrix = data.corr()
+correlation_matrix = data[summaryColumns].corr()
 
 # Set up the matplotlib figure with better size and DPI
 plt.figure(figsize=(12, 8), dpi=1200)
@@ -64,9 +65,9 @@ print(phaseTwodf[summaryColumns].describe())
 print(phaseThreedf[summaryColumns].describe())
 
 # Calculate correlation matrices
-correlation_matrix_phase_one = phaseOnedf.corr()
-correlation_matrix_phase_two = phaseTwodf.corr()
-correlation_matrix_phase_three = phaseThreedf.corr()
+correlation_matrix_phase_one = phaseOnedf[summaryColumns].corr()
+correlation_matrix_phase_two = phaseTwodf[summaryColumns].corr()
+correlation_matrix_phase_three = phaseThreedf[summaryColumns].corr()
 
 # Create a mask for the upper triangle
 mask = np.triu(np.ones_like(correlation_matrix_phase_one, dtype=bool))
@@ -121,5 +122,3 @@ plt.grid(axis='y', alpha=0.75)
 plt.tight_layout()
 plt.savefig('frustration_distribution.pdf', dpi=1200, bbox_inches='tight')
 plt.show()
-
-print("hello world")
