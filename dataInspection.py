@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+from matplotlib.backends.backend_pdf import PdfPages
 
 ###########################################
 # Loading Data
@@ -15,7 +16,7 @@ data = data.drop(data.columns[0], axis=1) # Remove the row index
 ###########################################
 
 summaryColumns = list(data.columns)
-toBeRemoved = ["Individual", "Phase", "Round", "Cohort"]
+toBeRemoved = ["Individual", "Phase", "Round", "Cohort", "Puzzler"]
 summaryColumns = [col for col in summaryColumns if col not in toBeRemoved]
 
 print(data[summaryColumns].describe())
@@ -49,8 +50,7 @@ plt.ylabel('Features', fontsize=12)
 plt.xticks(rotation=45, ha='right')  # Rotate x-axis labels for better readability
 plt.yticks(rotation=0)
 plt.tight_layout()
-plt.savefig('correlationM atrix.pdf', dpi=1200, bbox_inches='tight')
-plt.show()
+plt.savefig('correlationMatrix.pdf', dpi=1200, bbox_inches='tight')
 
 ###########################################
 # Summary statistics and Correlation Matrix for phases
@@ -108,7 +108,68 @@ cbar = fig.colorbar(hm3.collections[0], ax=axes.ravel().tolist(),
 
 # Save and show
 plt.savefig('correlationMatrixPhases.pdf', dpi=1200, bbox_inches='tight')
-plt.show()
+
+###########################################
+# Feature Distributions - All features as histograms in one PDF
+###########################################
+
+# Create histograms for all features and save to a single PDF
+with PdfPages('feature_distributions.pdf') as pdf:
+    # Calculate number of rows and columns for subplots
+    n_features = len(summaryColumns)
+    n_cols = 3  # 3 columns per page
+    n_rows = 4  # 4 rows per page
+    plots_per_page = n_cols * n_rows
+    
+    # Split features into pages
+    for page_start in range(0, n_features, plots_per_page):
+        page_end = min(page_start + plots_per_page, n_features)
+        page_features = summaryColumns[page_start:page_end]
+        
+        # Calculate actual rows needed for this page
+        actual_plots = len(page_features)
+        actual_rows = (actual_plots + n_cols - 1) // n_cols
+        
+        # Create figure for this page
+        fig, axes = plt.subplots(nrows=actual_rows, ncols=n_cols, 
+                                figsize=(15, 4*actual_rows), dpi=300)
+        
+        # Handle case where we have only one row
+        if actual_rows == 1:
+            axes = axes.reshape(1, -1) if actual_plots > 1 else [axes]
+        
+        # Flatten axes array for easier indexing
+        axes_flat = axes.flatten() if actual_plots > 1 else axes
+        
+        # Create histograms
+        for i, feature in enumerate(page_features):
+            ax = axes_flat[i] if actual_plots > 1 else axes_flat
+            
+            # Create histogram
+            data[feature].hist(bins=20, edgecolor='black', alpha=0.7, ax=ax)
+            ax.set_title(f'Distribution of {feature}', fontsize=12, fontweight='bold')
+            ax.set_xlabel(feature, fontsize=10)
+            ax.set_ylabel('Frequency', fontsize=10)
+            ax.grid(axis='y', alpha=0.3)
+            
+            # Add basic statistics as text
+            mean_val = data[feature].mean()
+            std_val = data[feature].std()
+            ax.text(0.02, 0.98, f'Mean: {mean_val:.2f}\nStd: {std_val:.2f}', 
+                   transform=ax.transAxes, verticalalignment='top',
+                   bbox=dict(boxstyle='round', facecolor='white', alpha=0.8),
+                   fontsize=9)
+        
+        # Hide unused subplots
+        if actual_plots > 1:
+            for i in range(actual_plots, len(axes_flat)):
+                axes_flat[i].set_visible(False)
+        
+        plt.tight_layout()
+        pdf.savefig(fig, bbox_inches='tight')
+        plt.close(fig)  # Close figure to free memory
+
+print(f"Feature distributions saved to 'feature_distributions.pdf'")
 
 ###########################################
 # Looking at distribution for the frustration output
@@ -121,4 +182,3 @@ plt.ylabel('Frequency', fontsize=12)
 plt.grid(axis='y', alpha=0.75)
 plt.tight_layout()
 plt.savefig('frustration_distribution.pdf', dpi=1200, bbox_inches='tight')
-plt.show()
